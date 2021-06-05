@@ -19,6 +19,7 @@ class Pawn(pygame.sprite.Sprite):
         self.image = pygame.image.load(f"Assets/{color}2.png")
         self.surf = pygame.Surface((54, 54))
         self.rect = self.surf.get_rect(center=location)
+        self.yard = True
 
     def move(self, new_location):
         """Initiates the move from any place on the grid to the given new location (tuple)"""

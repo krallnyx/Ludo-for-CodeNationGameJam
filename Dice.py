@@ -10,7 +10,7 @@ class Dice:
 
     def roll(self):
         """Basic function of a dice, rolling and returning an integer from 1 to number of sides (both included)"""
-        return random.randint(1, self.sides)
+        return random.randint(5, self.sides)
 
     def animate(self, screen):
         """While the dice is rolling, will display random results for a couple of seconds then return the result"""
