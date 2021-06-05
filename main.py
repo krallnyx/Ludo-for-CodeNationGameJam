@@ -38,4 +38,4 @@ while True:
             pygame.quit()
             sys.exit()
     pygame.display.update()
-    time.sleep(0.5)
+    time.sleep(0.1)
