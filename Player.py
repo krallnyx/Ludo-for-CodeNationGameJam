@@ -29,6 +29,7 @@ class Player(pygame.sprite.Sprite):
         self.color = color
         self.ladder = []
         self.initialise_ladder()
+        self.pawns_in_yard = [0, 1, 2, 3]
 
 
     def initialise_ladder(self):
