@@ -17,10 +17,10 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, color):
         super().__init__()
         self.pawns = [
-            Pawn(color, YARD_POSITIONS[color][0]),
-            Pawn(color, YARD_POSITIONS[color][1]),
-            Pawn(color, YARD_POSITIONS[color][2]),
-            Pawn(color, YARD_POSITIONS[color][3])
+            Pawn(color, 0, YARD_POSITIONS[color][0]),
+            Pawn(color, 1, YARD_POSITIONS[color][1]),
+            Pawn(color, 2, YARD_POSITIONS[color][2]),
+            Pawn(color, 3, YARD_POSITIONS[color][3])
         ]
         self.pawns_on_board = []
         self.pawns_on_centre = 0
@@ -30,7 +30,7 @@ class Player(pygame.sprite.Sprite):
         self.ladder = []
         self.initialise_ladder()
         self.pawns_in_yard = [0, 1, 2, 3]
-
+        self.yard_pos = YARD_POSITIONS
 
     def initialise_ladder(self):
         if self.color == 'green':
@@ -98,3 +98,5 @@ class Player(pygame.sprite.Sprite):
         """Draws the four pawns of the player on the surface at their respective locations"""
         for pawn in self.pawns:
             pawn.draw(surface)
+
+

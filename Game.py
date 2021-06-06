@@ -15,6 +15,7 @@ GRID_POSITIONS = [
     (454, 454), (454, 506), (454, 561), (454, 614), (454, 667), (454, 720), (454, 775)
 ]
 
+COLORS = {'green': 0, 'yellow': 1, 'blue': 2, 'red': 3}
 
 def initialise_pawns_on_grid():
     """Create a dictionary of positions on the grid, initialised to None. It will keep track of pawns on the grid"""
@@ -64,7 +65,7 @@ class Game:
     def __init__(self, screen):
         self.current_player = 0
         self.dice_result = 0
-        self.players = [Player("green"), Player("yellow")] # , Player("blue"), Player("red")]
+        self.players = [Player("green"), Player("yellow"), Player("blue"), Player("red")]
         self.dice = Dice(6)
         self.screen = screen
         self.game_over = False
@@ -77,8 +78,6 @@ class Game:
 
     def get_current_grid_position(self, pawn):
         """Returns the index in the grid of the current location of a pawn"""
-        # pawn = self.players[self.current_player].pawns[self.players[self.current_player].current_pawn]
-        # pawn = self.current_pawn
         if pawn.on_ladder:
             return self.players[self.current_player].ladder.index(pawn.location)
         else:
@@ -109,12 +108,18 @@ class Game:
             val = self.steps_taken(pawn_index)
             # print(f"grid value :{val} > 55?")
             if val > len(GRID_POSITIONS)-1:
-                pass  # we removed it from the grid, it's not on it anymore anyway
+                pass  # we removed it from the grid, it's on the ladder anyway
             else:
                 val = pawn_index + self.dice_result
                 if val > 55:
                     val -= 56
                 # print(f"added pawn at {val}")
+                if self.pawns_on_grid[val] is not None:
+                    # there is something here, if it's an opponent we have to return it to it's yard
+                    if self.pawns_on_grid[val].color == self.current_pawn.color:
+                        pass # never-mind it's one of us!
+                    else:
+                        self.return_pawn_to_yard(self.pawns_on_grid[val])
                 self.pawns_on_grid[val] = self.current_pawn
         self.loc = self.get_current_grid_position(self.current_pawn)
         self.moving = self.dice_result
@@ -128,7 +133,7 @@ class Game:
         self.players[self.current_player].pawns_on_board.append(pawn_number)
         self.players[self.current_player].current_pawn = pawn_number
         self.players[self.current_player].pawns[pawn_number].yard = False
-        # print(f"spawns in yard {self.players[self.current_player].pawns_in_yard}")
+        self.current_pawn = self.players[self.current_player].pawns[pawn_number]
         self.players[self.current_player].pawns_in_yard.pop(pawn_number)
 
     def click_pawn(self, pawns_can_move):
@@ -160,6 +165,12 @@ class Game:
                                     if val > 55:
                                         val -= 56
                                     # print(f"added pawn at {val}")
+                                    if self.pawns_on_grid[val] is not None:
+                                        # there is something here, if it's an opponent we have to return it to it's yard
+                                        if self.pawns_on_grid[val].color == self.current_pawn.color:
+                                            pass  # never-mind it's one of us!
+                                        else:
+                                            self.return_pawn_to_yard(self.pawns_on_grid[val])
                                     self.pawns_on_grid[val] = self.current_pawn
                             self.moving = self.dice_result
                             return 0
@@ -184,6 +195,7 @@ class Game:
             self.players[self.current_player].pawns_on_board.append(self.players[self.current_player].pawns_in_yard[-1])
             self.players[self.current_player].pawns[self.players[self.current_player].pawns_in_yard[-1]].yard = False
             self.players[self.current_player].current_pawn = self.players[self.current_player].pawns_in_yard[-1]
+            self.current_pawn = self.players[self.current_player].pawns_in_yard[-1]
             self.players[self.current_player].pawns_in_yard.pop()
             self.players[self.current_player].pawns[
                 self.players[self.current_player].current_pawn].move(
@@ -266,30 +278,46 @@ class Game:
     def move_is_blocked(self, pawn):
         loc = GRID_POSITIONS.index(pawn.location)
         for i in range(loc+1, loc + self.dice_result):
-            if self.pawns_on_grid[i] is not None:
+            if i > 55:
+                val = i-56
+            else:
+                val = i
+            if self.pawns_on_grid[val] is not None:
                 # print(f"move is blocked on index {i}")
                 return True
-        if self.pawns_on_grid[loc + self.dice_result] is not None and\
-                self.pawns_on_grid[loc + self.dice_result].color == pawn.color:
+        val = loc + self.dice_result
+        if val > 55:
+            val -= 56
+        if self.pawns_on_grid[val] is not None and\
+                self.pawns_on_grid[val].color == pawn.color:
             return True
         # print("path not blocked")
         return False
 
-    def can_capture(self, pawn):
-        if self.pawns_on_grid[GRID_POSITIONS.index(pawn.location) + self.dice_result] is not None:
-            print(f"pawn will be captured")
+    # def can_capture(self, pawn):
+    #    val = GRID_POSITIONS.index(pawn.location) + 1
+    #    if val > 55:
+    #        val -= 56
+    #    if self.pawns_on_grid[val] is not None:
+    #        print(f"PAWN WILL BE CAPTURED !!!!!!!!!!!!!!")
+    #    else:
+    #        print(f"nothing to capture at {val}")
+
+    def return_pawn_to_yard(self, pawn):
+        pawn.yard = True
+        pawn.move(self.players[self.current_player].yard_pos[pawn.color][pawn.index])
+        self.players[COLORS[pawn.color]].pawns_on_board.remove(pawn.index)
+        self.players[COLORS[pawn.color]].pawns_in_yard.append(pawn.index)
 
     def events(self):
         """Check which event is running"""
         if not self.game_over:
             if self.moving > 0:
-                if self.moving == 1:
-                    self.can_capture(self.current_pawn)
                 # print("pawn still moving")
                 self.loc += 1
                 if self.loc == self.players[self.current_player].pawns[0].starting_point:
                     self.current_pawn.move(self.players[self.current_player].ladder[0])
-                    print("current pawn is now on ladder")
+                    # print("current pawn is now on ladder")
                     self.current_pawn.on_ladder = True
                 elif self.current_pawn.on_ladder:
                     self.current_pawn.move(self.players[self.current_player].ladder[self.get_current_grid_position(self.current_pawn)+1])

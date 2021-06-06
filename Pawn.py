@@ -4,7 +4,7 @@ import pygame
 
 class Pawn(pygame.sprite.Sprite):
     """Basic moving piece on the board, need to be initialized with a color and location"""
-    def __init__(self, color, location):
+    def __init__(self, color, index, location):
         super().__init__()
         if color == "green":
             self.starting_point = 1
@@ -22,6 +22,7 @@ class Pawn(pygame.sprite.Sprite):
         self.yard = True
         self.on_ladder = False
         self.is_centre = False
+        self.index = index
 
     def move(self, new_location):
         """Initiates the move from any place on the grid to the given new location (tuple)"""
