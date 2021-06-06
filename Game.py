@@ -58,6 +58,15 @@ class Game:
                             button[1] <= click[1] <= button[1] + 64):
                         return 0
 
+    def is_pawn_at_starting_point(self):
+        for pawn in self.players[self.current_player].pawns:
+            if pawn.is_centre or pawn.yard:
+                pass
+            else:
+                if GRID_POSITIONS[pawn.starting_point] == pawn.location:
+                    return True
+        return False
+
     def wait_for_choice(self, buttons):
         """2 buttons are displayed, waiting for the player to click 1"""
         while True:
@@ -79,6 +88,7 @@ class Game:
         if self.current_player == len(self.players):
             self.current_player = 0
         self.dice_result = 0
+        self.moving = 0
         self.current_pawn = None
 
     def move_pawn(self):
@@ -120,11 +130,11 @@ class Game:
     def player_rolled_6(self, pawns_can_move):
         """player rolling a 6 is a special event"""
         try:
-            self.current_pawn = self.players[self.current_player].pawns[
-                self.players[self.current_player].pawns_on_board[0]]
+            self.current_pawn = pawns_can_move[0]
         except IndexError:
             self.current_pawn = None
         if len(pawns_can_move) == 0 and len(self.players[self.current_player].pawns_in_yard) > 0:
+            print("none can move, pawn(s) in yard")
             button = self.players[self.current_player].pawn_out_menu(self.screen, self.current_player, self.dice)
             self.wait_for_click(button)
             self.roll_pressed = True
@@ -136,13 +146,17 @@ class Game:
                 self.players[self.current_player].current_pawn].move(
                 GRID_POSITIONS[self.players[self.current_player].pawns[
                     self.players[self.current_player].current_pawn].starting_point])
-        elif len(pawns_can_move) == 1 and GRID_POSITIONS[
-                self.current_pawn.starting_point] == self.current_pawn.location:
-            self.current_pawn = self.players[self.current_player].pawns[
-                self.players[self.current_player].pawns_on_board[0]]
+        elif len(pawns_can_move) == 1 and self.is_pawn_at_starting_point():
+            print("rolled 6, only 1 can move, there is a pawn at start")
             self.move_1_pawn()
             return 0
-        elif len(pawns_can_move) <= 3:
+        elif len(pawns_can_move) == 0:
+            print("rolled 6 and 0 can move, none in yard")
+            pass
+        elif len(pawns_can_move) <= 3 and \
+                len(self.players[self.current_player].pawns_in_yard) > 0 and \
+                not self.is_pawn_at_starting_point():
+            print("rolled 6, at least 1 can move, at least 1 in yard")
             buttons = self.players[self.current_player].choice_menu(self.screen, self.current_player, self.dice)
             choice = self.wait_for_choice(buttons)
             if choice == 0:
@@ -162,14 +176,17 @@ class Game:
             elif choice == 1:
                 # move existing pawn clicked"
                 if len(pawns_can_move) == 1:
-                    self.current_pawn = self.players[self.current_player].pawns[
-                        self.players[self.current_player].pawns_on_board[0]]
+                    self.current_pawn = pawns_can_move[0]
                     self.move_pawn()
                     return 0
                 else:
                     # the player need to choose which pawn to move
                     self.click_pawn()
                     return 0
+        elif len(pawns_can_move) <= 3:
+            print("rolled 6, at least 1 can move, 0 in yard")
+            self.click_pawn()
+            return 0
         self.roll_pressed = False
         self.end_of_turn()
 
@@ -177,12 +194,17 @@ class Game:
         list_pawns = []
         for pawn in self.players[self.current_player].pawns:
             if not pawn.is_centre and not pawn.yard:
+                print("pawn not in centre no in yard")
                 if pawn.on_ladder:
                     print(f"pawn on ladder. pos:{self.get_current_grid_position(pawn)}, dice:{self.dice_result}")
                     if (self.get_current_grid_position(pawn) + self.dice_result) < 7:
+                        print("enough room on ladder, pawn can move")
                         list_pawns.append(pawn)
                 else:
+                    print("pawn can move")
                     list_pawns.append(pawn)
+            else:
+                print("pawn in yard or centre")
         print(f"{len(list_pawns)} pawns can move")
         if len(list_pawns) == 1:
             self.current_pawn = list_pawns[0]
@@ -191,7 +213,8 @@ class Game:
     def events(self):
         """Check which event is running"""
         if not self.game_over:
-            if self.moving != 0:
+            if self.moving > 0:
+                print("pawn still moving")
                 self.loc += 1
                 if self.loc == self.players[self.current_player].pawns[0].starting_point:
                     self.current_pawn.move(self.players[self.current_player].ladder[0])
@@ -199,7 +222,7 @@ class Game:
                     self.current_pawn.on_ladder = True
                 elif self.current_pawn.on_ladder:
                     self.current_pawn.move(self.players[self.current_player].ladder[self.get_current_grid_position(self.current_pawn)+1])
-                    if self.get_current_grid_position(self.current_pawn) == 5 and self.moving == 2:
+                    if self.get_current_grid_position(self.current_pawn) == 6 and self.moving == 1:
                         self.current_pawn.is_centre = True
                         self.players[self.current_player].pawns_on_centre += 1
                         if self.players[self.current_player].pawns_on_centre == 4:
@@ -213,41 +236,48 @@ class Game:
                                 print(f"2nd: {self.finishers[1]}")
                                 print(f"3rd: {self.finishers[2]}")
                         print("pawn in centre")
-                        self.end_of_turn()
                 else:
                     if self.loc >= len(GRID_POSITIONS):
                         self.loc = 0
                     self.current_pawn.move(
                         GRID_POSITIONS[self.loc])
                 self.moving -= 1
-                if self.moving == 0:
+                if self.moving <= 0:
                     self.end_of_turn()
                 return 0
             if self.dice_result == 0 and not self.roll_pressed:
+                print("displaying roll dice button")
                 button = self.players[self.current_player].roll_menu(self.screen, self.current_player, self.dice)
                 self.wait_for_click(button)
                 self.roll_pressed = True
                 return 0
             elif self.roll_pressed:
+                print("roll pressed")
                 self.dice_result = self.dice.animate(self.screen)
                 self.roll_pressed = False
                 return 0
             elif self.dice_result != 0:
+                print("entering loop 'dice has a result'")
                 pawns_can_move = self.pawns_can_move()
                 # we display the choices to the player and wait for his action if any possible
                 if self.dice_result == 6:
+                    print("launching dice = 6")
                     self.player_rolled_6(pawns_can_move)
                     return 0
                 elif len(pawns_can_move) == 0:
+                    print("no action, pass")
                     pass
                 else:
+                    print("dice has a result => else")
                     if len(pawns_can_move) == 1:
+                        print("1 can move")
                         self.current_pawn = self.players[self.current_player].pawns[
                             self.players[self.current_player].pawns_on_board[0]]
                         self.current_pawn = pawns_can_move[0]
                         self.move_1_pawn()
                         return 0
                     else:
+                        print("many can move")
                         self.click_pawn()
                         return 0
                 self.end_of_turn()
