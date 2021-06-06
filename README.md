@@ -10,3 +10,9 @@ Knonw bugs (or "features") :
 - When you roll a 6, have pawns on the board but they can't move and still have pawn(s) on the yard. If you have a pawn on your starting position, the game will ask you to swap it with one of your yard.
 
 The rules applied : https://en.wikipedia.org/wiki/Ludo_(board_game)
+
+The only way to change the number of players is by hardcoding it, on line 68 of Game.py you have:
+        self.players = [Player("green"), Player("yellow"), Player("blue"), Player("red")]
+you can change that to for example : 
+        self.players = [Player("yellow"), Player("red")]
+And you will play as Yellow and Red
